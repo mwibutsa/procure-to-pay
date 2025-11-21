@@ -1,0 +1,89 @@
+Build a mini “Procure-to-Pay” system (inspired by Payhawk: https://payhawk.com/en-eu/lp-procure-to-pay-software) with REST APIs using Django + Django REST Framework, containerized with Docker, and deployed publicly (AWS EC2, Render, Fly.io, or any VPS). This assessment evaluates your ability to write efficient, maintainable code handling complex business logic, multi-level workflows, and integration with external services.
+Note: Use AI tools to meet the deadline (Cursor, Windsurf, etc).
+Deliverables
+A GitHub repository containing:
+Django project & app source code
+Dockerfile and docker-compose.yml
+API documentation (Swagger, Postman, or Markdown)
+Short README: setup & run instructions, public IP/URL
+Live instance accessible via public IP or domain
+Problem Statement
+Create a simplified Purchase Request & Approval System:
+Staff submit purchase requests → multi-level managers approve/reject → finance can view approved requests.
+Business Requirements
+Staff can: create requests, view/update pending requests, submit receipts.
+Approvers can: view pending requests, approve/reject, see reviewed requests.
+Finance team: access and interact with requests via web UI, upload files.
+Approval Workflow
+Requests start as PENDING.
+Requires approval from multiple levels.
+Any rejection → request becomes REJECTED.
+All required approvals → request becomes APPROVED.
+Approved/rejected status cannot change.
+Last approver generates a Purchase Order automatically.
+System must handle concurrent interactions safely.
+Document Processing (AI-Based)
+Proforma upload → store file & extract key data
+Automatic PO generation → extract vendor, items, prices, terms, store PO
+Receipt validation → compare items/prices/seller to PO, flag discrepancies
+Recommended libraries: pytesseract, pdfplumber, PyPDF2, OpenAI API
+Technical Requirements
+Data Models
+User/Auth: Django User or custom; roles: staff, approver-level-1/2, finance; role-based access control
+PurchaseRequest: title, description, amount, status (pending/approved/rejected), created_by, approved_by, timestamps, proforma, purchase_order, receipt
+Optional: Approval model, RequestItem model
+API Endpoints (Django REST Framework)
+POST /api/requests/ → create request (Staff)
+GET /api/requests/ → list requests (filtered by creator if staff)
+GET /api/requests/{id}/ → view details
+PATCH /api/requests/{id}/approve/ → approve (Approver)
+PATCH /api/requests/{id}/reject/ → reject (Approver)
+PUT /api/requests/{id}/ → update request (Staff, if pending)
+POST /api/requests/{id}/submit-receipt/ → submit receipt (Staff)
+Requirements: authentication (Token/JWT/Session), role-based access control, validation, proper HTTP codes, file uploads, data consistency, performance optimization.
+Document Processing Implementation
+Proforma: accept uploads, store, extract metadata
+Automatic PO: triggered on final approval, extract details, generate PO document
+Receipt validation: accept upload, extract data, compare with PO, return validation results
+Approach can use text extraction, OCR, AI/LLM, or combination
+Dockerization
+Provide Dockerfile, optional docker-compose.yml
+Include required services (PostgreSQL, Redis if needed)
+Running:
+git clone <repo>
+cd project
+docker-compose up --build
+Frontend Implementation
+Framework: React (hooks) or Vanilla JS (ES6+)
+Features: login, dashboard by role, request form with file upload, list view with filtering/status, detail view with approval history, approve/reject UI, receipt upload, role-based UI
+Responsive, clean interface, proper feedback & error handling
+Consume REST API, handle auth tokens/sessions, proper error handling
+Optional: serve separate or integrated with Django, CORS, UI libraries
+AI Feature
+Request submission → quotation/proforma → automatic PO generation
+Post-purchase receipt → compare item/price/seller to PO → trigger error if mismatch
+Deployment
+Public environment: AWS EC2, Render, Fly.io, Railway, DigitalOcean, or VPS
+Accessible via public URL, both backend & frontend functional
+Include deployment URL & documentation
+Optional Features
+Swagger UI / Postman collection
+Email notifications on approval/rejection
+Pagination/filtering
+GitHub Actions for Docker build & deploy
+Evaluation Criteria (100 pts)
+Functionality: 25
+Code Quality: 20
+Security: 15
+Frontend: 15
+Deployment & Docker: 15
+Documentation: 10
+Submission
+GitHub repo link
+Public app URL
+Invite: denis.niwemugisha@ist.com
+blaise.bakundukize@ist.com
+alain.burindi@ist.com
+Deadline: By Nov 26th
+For any blocker use the app chat during working hours.
+

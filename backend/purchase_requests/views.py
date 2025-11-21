@@ -1,0 +1,196 @@
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models import Q
+from .models import PurchaseRequest
+from .serializers import (
+    PurchaseRequestSerializer,
+    PurchaseRequestCreateSerializer,
+    PurchaseRequestUpdateSerializer,
+    ApproveRequestSerializer,
+    RejectRequestSerializer,
+    SubmitReceiptSerializer
+)
+from .services import ApprovalWorkflowService
+from users.permissions import IsStaff, IsApprover, IsFinance, IsInOrganization
+from documents.tasks import process_receipt_task
+
+
+class PurchaseRequestViewSet(viewsets.ModelViewSet):
+    """ViewSet for purchase requests"""
+    queryset = PurchaseRequest.objects.all()
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['status']
+    search_fields = ['title', 'description']
+    ordering_fields = ['created_at', 'amount', 'status']
+    ordering = ['-created_at']
+    
+    def get_queryset(self):
+        """Filter queryset based on user role and organization"""
+        queryset = PurchaseRequest.objects.filter(
+            organization=self.request.user.organization
+        )
+        
+        # Role-based filtering
+        if self.request.user.role == self.request.user.Role.STAFF:
+            # Staff can only see their own requests
+            queryset = queryset.filter(created_by=self.request.user)
+        elif self.request.user.role == self.request.user.Role.APPROVER:
+            # Approvers can see pending requests they can act on + their reviewed requests
+            pending = ApprovalWorkflowService.get_pending_requests_for_approver(self.request.user)
+            reviewed = PurchaseRequest.objects.filter(
+                organization=self.request.user.organization,
+                approvals__approver=self.request.user
+            ).distinct()
+            queryset = pending.union(reviewed)
+        elif self.request.user.role == self.request.user.Role.FINANCE:
+            # Finance can see approved requests (or all if configured)
+            if self.request.user.organization.finance_can_see_all:
+                queryset = queryset
+            else:
+                queryset = queryset.filter(status=PurchaseRequest.Status.APPROVED)
+        
+        # Additional filtering
+        status_filter = self.request.query_params.get('status')
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        amount_min = self.request.query_params.get('amount_min')
+        amount_max = self.request.query_params.get('amount_max')
+        
+        if date_from:
+            queryset = queryset.filter(created_at__gte=date_from)
+        if date_to:
+            queryset = queryset.filter(created_at__lte=date_to)
+        if amount_min:
+            queryset = queryset.filter(amount__gte=amount_min)
+        if amount_max:
+            queryset = queryset.filter(amount__lte=amount_max)
+        
+        return queryset.select_related('organization', 'created_by', 'updated_by').prefetch_related(
+            'items', 'approvals__approver', 'documents'
+        )
+    
+    def get_serializer_class(self):
+        """Return appropriate serializer class"""
+        if self.action == 'create':
+            return PurchaseRequestCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return PurchaseRequestUpdateSerializer
+        return PurchaseRequestSerializer
+    
+    def get_permissions(self):
+        """Return appropriate permissions based on action"""
+        if self.action == 'create':
+            return [IsAuthenticated(), IsStaff()]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated(), IsStaff(), IsInOrganization()]
+        elif self.action in ['approve', 'reject']:
+            return [IsAuthenticated(), IsApprover(), IsInOrganization()]
+        elif self.action == 'submit_receipt':
+            return [IsAuthenticated(), IsStaff(), IsInOrganization()]
+        return [IsAuthenticated()]
+    
+    def perform_create(self, serializer):
+        """Create purchase request"""
+        serializer.save(
+            organization=self.request.user.organization,
+            created_by=self.request.user
+        )
+    
+    def update(self, request, *args, **kwargs):
+        """Update purchase request (only if pending)"""
+        instance = self.get_object()
+        
+        if not instance.can_be_updated:
+            return Response(
+                {'detail': 'Request cannot be updated. Only pending requests can be updated.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return super().update(request, *args, **kwargs)
+    
+    @action(detail=True, methods=['patch'])
+    def approve(self, request, pk=None):
+        """Approve a purchase request"""
+        request_obj = self.get_object()
+        serializer = ApproveRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            approval = ApprovalWorkflowService.approve_request(
+                request_obj,
+                request.user,
+                comments=serializer.validated_data.get('comments', '')
+            )
+            return Response({
+                'detail': 'Request approved successfully',
+                'approval': {
+                    'id': approval.id,
+                    'approval_level': approval.approval_level,
+                    'action': approval.action,
+                    'timestamp': approval.timestamp
+                }
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {'detail': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['patch'])
+    def reject(self, request, pk=None):
+        """Reject a purchase request"""
+        request_obj = self.get_object()
+        serializer = RejectRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        try:
+            approval = ApprovalWorkflowService.reject_request(
+                request_obj,
+                request.user,
+                comments=serializer.validated_data['comments']
+            )
+            return Response({
+                'detail': 'Request rejected successfully',
+                'approval': {
+                    'id': approval.id,
+                    'approval_level': approval.approval_level,
+                    'action': approval.action,
+                    'timestamp': approval.timestamp
+                }
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response(
+                {'detail': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['post'])
+    def submit_receipt(self, request, pk=None):
+        """Submit receipt for a purchase request"""
+        request_obj = self.get_object()
+        serializer = SubmitReceiptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        if request_obj.status != PurchaseRequest.Status.APPROVED:
+            return Response(
+                {'detail': 'Receipt can only be submitted for approved requests.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update receipt file URL
+        request_obj.receipt_file_url = serializer.validated_data['receipt_file_url']
+        request_obj.updated_by = request.user
+        request_obj.save()
+        
+        # Process receipt asynchronously
+        process_receipt_task.delay(str(request_obj.id))
+        
+        return Response({
+            'detail': 'Receipt submitted successfully. Validation in progress.'
+        }, status=status.HTTP_200_OK)
