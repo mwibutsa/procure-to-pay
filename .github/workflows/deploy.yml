@@ -20,7 +20,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Build and push backend image
@@ -28,7 +28,7 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ghcr.io/${{ github.repository }}/backend:latest
+          tags: ghcr.io/${{ github.repository_owner }}/procure-to-pay-backend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
@@ -37,7 +37,7 @@ jobs:
         with:
           context: ./frontend
           push: true
-          tags: ghcr.io/${{ github.repository }}/frontend:latest
+          tags: ghcr.io/${{ github.repository_owner }}/procure-to-pay-frontend:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
       

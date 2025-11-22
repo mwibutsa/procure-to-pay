@@ -447,7 +447,7 @@ nano docker-compose.yml
 
 ```yaml
 backend:
-  image: ghcr.io/YOUR_USERNAME/YOUR_REPO_NAME/backend:latest
+  image: ghcr.io/YOUR_USERNAME/procure-to-pay-backend:latest
   # Remove or comment out the build section
   # build:
   #   context: ./backend
@@ -455,7 +455,7 @@ backend:
   # ... rest of config
 
 frontend:
-  image: ghcr.io/YOUR_USERNAME/YOUR_REPO_NAME/frontend:latest
+  image: ghcr.io/YOUR_USERNAME/procure-to-pay-frontend:latest
   # Remove or comment out the build section
   # build:
   #   context: ./frontend
@@ -463,7 +463,9 @@ frontend:
   # ... rest of config
 ```
 
-**Replace `YOUR_USERNAME/YOUR_REPO_NAME` with your actual GitHub username and repository name.**
+**Replace `YOUR_USERNAME` with your GitHub username (or organization name if you have permissions).**
+
+**If you still get permission errors, see `GITHUB_PACKAGES_FIX.md` for alternative solutions (Docker Hub recommended).**
 
 ---
 
