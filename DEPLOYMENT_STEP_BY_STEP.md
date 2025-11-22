@@ -7,119 +7,49 @@ This is a comprehensive guide to deploy the Procure-to-Pay system to a Contabo V
 Before starting, ensure you have:
 
 - [ ] Contabo VPS with Ubuntu 20.04+ (recommended: 22.04 LTS)
-- [ ] Domain name pointing to your VPS IP (optional but recommended for SSL)
 - [ ] SSH access to your VPS
 - [ ] GitHub repository with your code
 - [ ] Cloudinary account (for file uploads)
 - [ ] Google Gemini API key (for document processing)
 - [ ] Email service credentials (Gmail SMTP or similar)
 
+**Note:** Domain name is optional. You can use your VPS IP address.
+
 ---
 
-## Phase 1: VPS Initial Setup
+## Phase 1: Automated VPS Setup (One-Time)
 
 ### Step 1.1: Connect to Your VPS
 
 ```bash
-# Connect via SSH (replace with your VPS IP)
 ssh root@YOUR_VPS_IP
-# Or if you have a user account:
-ssh username@YOUR_VPS_IP
+# Or: ssh username@YOUR_VPS_IP
 ```
 
-### Step 1.2: Update System
+### Step 1.2: Run Automated Setup Script
 
 ```bash
-# Update package list
-sudo apt update
+# Download and run setup script
+curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/vps-setup.sh -o vps-setup.sh
+chmod +x vps-setup.sh
+./vps-setup.sh
 
-# Upgrade all packages
-sudo apt upgrade -y
-
-# Install essential tools
-sudo apt install -y curl wget git nano ufw fail2ban
+# Or if script is in your repo, clone first:
+git clone YOUR_REPO_URL /tmp/repo
+chmod +x /tmp/repo/vps-setup.sh
+/tmp/repo/vps-setup.sh
 ```
 
-### Step 1.3: Create Deployment User (Recommended)
+**This script automatically:**
 
-```bash
-# Create a new user for deployment
-sudo adduser deploy
+- Updates system
+- Installs Docker & Docker Compose
+- Installs Nginx
+- Configures firewall
+- Creates app directory
+- Generates SSH key for GitHub Actions
 
-# Add user to sudo group
-sudo usermod -aG sudo deploy
-
-# Add user to docker group (we'll install Docker next)
-# We'll do this after Docker installation
-
-# Switch to deploy user
-su - deploy
-```
-
-### Step 1.4: Install Docker
-
-```bash
-# Install Docker using official script
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
-
-# Add current user to docker group (if not root)
-sudo usermod -aG docker $USER
-
-# Log out and back in for group changes to take effect
-exit
-# SSH back in
-
-# Verify Docker installation
-docker --version
-docker compose version
-```
-
-### Step 1.5: Install Docker Compose (if not included)
-
-```bash
-# Docker Compose v2 is usually included, but if not:
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
-# Verify
-docker compose version
-```
-
-### Step 1.6: Install Nginx
-
-```bash
-sudo apt install nginx -y
-
-# Start and enable Nginx
-sudo systemctl start nginx
-sudo systemctl enable nginx
-
-# Verify Nginx is running
-sudo systemctl status nginx
-```
-
-### Step 1.7: Configure Firewall
-
-```bash
-# Allow SSH (important - don't lock yourself out!)
-sudo ufw allow OpenSSH
-
-# Allow HTTP and HTTPS
-sudo ufw allow 'Nginx Full'
-
-# Enable firewall
-sudo ufw enable
-
-# Check status
-sudo ufw status
-```
-
-### Step 1.8: Install Certbot (for SSL)
-
-```bash
-sudo apt install certbot python3-certbot-nginx -y
-```
+**After script completes, copy the SSH private key shown.**
 
 ---
 
@@ -155,8 +85,8 @@ nano .env
 # Django Settings
 SECRET_KEY=your-super-secret-key-generate-this-randomly
 DEBUG=False
-ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com,YOUR_VPS_IP
-CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+ALLOWED_HOSTS=YOUR_VPS_IP
+CORS_ALLOWED_ORIGINS=http://YOUR_VPS_IP
 
 # Database (PostgreSQL in Docker)
 DB_NAME=procure_to_pay
@@ -207,10 +137,10 @@ cd frontend
 nano .env.local
 ```
 
-**Add:**
+**Add (replace YOUR_VPS_IP with your actual IP):**
 
 ```bash
-NEXT_PUBLIC_API_URL=https://yourdomain.com/api
+NEXT_PUBLIC_API_URL=http://YOUR_VPS_IP/api
 ```
 
 **Save and exit**
@@ -314,47 +244,15 @@ frontend:
 
 ---
 
-## Phase 4: Domain and SSL Setup
-
-### Step 4.1: Point Domain to VPS
-
-1. Go to your domain registrar
-2. Add an A record:
-   - **Name:** `@` (or blank)
-   - **Type:** A
-   - **Value:** Your VPS IP address
-   - **TTL:** 3600 (or default)
-3. Add another A record for www:
-   - **Name:** `www`
-   - **Type:** A
-   - **Value:** Your VPS IP address
-
-**Wait for DNS propagation (can take up to 48 hours, usually 1-2 hours)**
-
-### Step 4.2: Verify DNS
+## Phase 4: Get Your VPS IP (No Domain Needed)
 
 ```bash
-# Check if domain points to your IP
-dig yourdomain.com +short
-# Should return your VPS IP
-
-# Or use:
-nslookup yourdomain.com
+# Get your VPS IP address
+curl -s ifconfig.me
+# Or: hostname -I | awk '{print $1}'
 ```
 
-### Step 4.3: Get SSL Certificate
-
-```bash
-# Get SSL certificate (replace with your domain)
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
-
-# Follow the prompts:
-# - Enter your email
-# - Agree to terms
-# - Choose whether to redirect HTTP to HTTPS (recommended: Yes)
-```
-
-**If you don't have a domain yet, you can skip SSL for now and use HTTP. You can add SSL later.**
+**Save this IP - you'll use it in configuration.**
 
 ---
 
@@ -366,77 +264,7 @@ sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
 sudo nano /etc/nginx/sites-available/procure-to-pay
 ```
 
-**Add the following (replace `yourdomain.com` with your domain or use IP):**
-
-```nginx
-# HTTP to HTTPS redirect (if using SSL)
-server {
-    listen 80;
-    server_name yourdomain.com www.yourdomain.com;
-
-    # For Let's Encrypt verification
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    # Redirect to HTTPS (if SSL is configured)
-    # Uncomment after SSL is set up:
-    # return 301 https://$server_name$request_uri;
-}
-
-# HTTPS server (if using SSL)
-server {
-    listen 443 ssl http2;
-    server_name yourdomain.com www.yourdomain.com;
-
-    # SSL certificates (if using Let's Encrypt)
-    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
-
-    # SSL configuration
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
-
-    # Security headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-
-    # Increase upload size for file uploads
-    client_max_body_size 10M;
-
-    # Backend API
-    location /api/ {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # WebSocket support (if needed)
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-
-    # Frontend
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # WebSocket support
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
-
-**If NOT using SSL (using IP only):**
+**Add (replace YOUR_VPS_IP with your actual IP):**
 
 ```nginx
 server {
@@ -485,79 +313,39 @@ sudo systemctl reload nginx
 
 ---
 
-## Phase 6: Initial Deployment
+## Phase 6: Initial Deployment (Automated via GitHub Actions)
 
-### Step 6.1: Build and Start Services
+**Skip manual deployment. After setting up GitHub Actions (Phase 7), push to main branch and it will deploy automatically.**
+
+**For first-time setup only, run these once:**
 
 ```bash
 cd /opt/procure-to-pay
 
-# Pull latest images (if using GitHub Container Registry)
-# For first deployment, we'll build locally
-docker compose build
+# Clone repository (if not already cloned)
+git clone YOUR_REPO_URL .
 
-# Start all services
+# Create .env file (see Phase 2.2)
+
+# Build and start services
+docker compose build
 docker compose up -d
 
-# Check if services are running
-docker compose ps
-```
-
-### Step 6.2: Run Database Migrations
-
-```bash
-# Wait a few seconds for database to be ready
+# Wait for database, then run migrations
 sleep 10
-
-# Run migrations
 docker compose exec backend python manage.py migrate
-
-# Create superuser
 docker compose exec backend python manage.py createsuperuser
-# Follow prompts to create admin user
-
-# Collect static files
 docker compose exec backend python manage.py collectstatic --noinput
-```
-
-### Step 6.3: Verify Services
-
-```bash
-# Check all services are running
-docker compose ps
-
-# Check logs
-docker compose logs backend
-docker compose logs frontend
-docker compose logs db
-docker compose logs redis
-
-# Test backend API
-curl http://localhost:8000/api/docs/
-
-# Test frontend
-curl http://localhost:3000
 ```
 
 ---
 
 ## Phase 7: GitHub Actions Setup
 
-### Step 7.1: Generate SSH Key for Deployment
+### Step 7.1: Get SSH Key (Already Generated by Setup Script)
 
 ```bash
-# On your VPS, generate SSH key pair
-ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/github_actions_deploy
-
-# Don't set a passphrase (press Enter twice)
-
-# Display public key
-cat ~/.ssh/github_actions_deploy.pub
-
-# Add public key to authorized_keys
-cat ~/.ssh/github_actions_deploy.pub >> ~/.ssh/authorized_keys
-
-# Display private key (you'll need this for GitHub Secrets)
+# Display private key (already generated by vps-setup.sh)
 cat ~/.ssh/github_actions_deploy
 # Copy this entire output - you'll add it to GitHub Secrets
 ```
@@ -572,7 +360,7 @@ cat ~/.ssh/github_actions_deploy
 **VPS_HOST**
 
 - Name: `VPS_HOST`
-- Value: Your VPS IP address or domain (e.g., `123.45.67.89` or `yourdomain.com`)
+- Value: Your VPS IP address (e.g., `123.45.67.89`)
 
 **VPS_USER**
 

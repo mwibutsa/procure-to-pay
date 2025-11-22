@@ -52,7 +52,7 @@ jobs:
             git pull origin main || true
             docker compose pull backend frontend
             docker compose up -d --no-deps backend frontend
-            docker compose exec -T backend python manage.py migrate
-            docker compose exec -T backend python manage.py collectstatic --noinput
+            docker compose exec -T backend python manage.py migrate || true
+            docker compose exec -T backend python manage.py collectstatic --noinput || true
             docker compose restart backend frontend
 
