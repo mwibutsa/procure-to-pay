@@ -18,6 +18,7 @@ chmod +x setup.sh && ./setup.sh
 ### 2. Configure GitHub Secrets
 
 Add these in GitHub → Settings → Secrets:
+
 - `VPS_HOST`: Your VPS IP
 - `VPS_USER`: Your SSH username
 - `VPS_SSH_KEY`: Private key from step 1
@@ -39,4 +40,3 @@ git push origin main
 ```
 
 **That's it!** After first push, all future deployments are automatic.
-
