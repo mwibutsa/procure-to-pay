@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import PurchaseRequest, Approval, RequestItem, Document
 from users.serializers import UserSerializer
+from .utils import upload_file_to_cloudinary, validate_file_type, validate_file_size
 
 
 class RequestItemSerializer(serializers.ModelSerializer):
@@ -76,17 +77,48 @@ class PurchaseRequestSerializer(serializers.ModelSerializer):
 class PurchaseRequestCreateSerializer(serializers.ModelSerializer):
     """Purchase request create serializer"""
     items = RequestItemSerializer(many=True, required=False)
+    proforma_file = serializers.FileField(required=False, write_only=True)
     
     class Meta:
         model = PurchaseRequest
         fields = [
             'title', 'description', 'amount',
-            'proforma_file_url', 'items'
+            'proforma_file', 'items'
         ]
+    
+    def validate_proforma_file(self, value):
+        """Validate proforma file"""
+        if value:
+            # Validate file type
+            is_valid, error = validate_file_type(value)
+            if not is_valid:
+                raise serializers.ValidationError(error)
+            
+            # Validate file size (10MB max)
+            is_valid, error = validate_file_size(value, max_size_mb=10)
+            if not is_valid:
+                raise serializers.ValidationError(error)
+        
+        return value
     
     def create(self, validated_data):
         items_data = validated_data.pop('items', [])
+        proforma_file = validated_data.pop('proforma_file', None)
+        
+        # Upload proforma file to Cloudinary if provided
+        proforma_file_url = None
+        if proforma_file:
+            proforma_file_url = upload_file_to_cloudinary(
+                proforma_file,
+                folder=f'procure-to-pay/{self.context["request"].user.organization.id}/proformas'
+            )
+            if not proforma_file_url:
+                raise serializers.ValidationError({
+                    'proforma_file': 'Failed to upload file to Cloudinary. Please try again.'
+                })
+        
         request = PurchaseRequest.objects.create(
+            proforma_file_url=proforma_file_url,
             **validated_data,
             organization=self.context['request'].user.organization,
             created_by=self.context['request'].user
@@ -102,16 +134,45 @@ class PurchaseRequestCreateSerializer(serializers.ModelSerializer):
 class PurchaseRequestUpdateSerializer(serializers.ModelSerializer):
     """Purchase request update serializer"""
     items = RequestItemSerializer(many=True, required=False)
+    proforma_file = serializers.FileField(required=False, write_only=True)
     
     class Meta:
         model = PurchaseRequest
         fields = [
             'title', 'description', 'amount',
-            'proforma_file_url', 'items'
+            'proforma_file', 'items'
         ]
+    
+    def validate_proforma_file(self, value):
+        """Validate proforma file"""
+        if value:
+            # Validate file type
+            is_valid, error = validate_file_type(value)
+            if not is_valid:
+                raise serializers.ValidationError(error)
+            
+            # Validate file size (10MB max)
+            is_valid, error = validate_file_size(value, max_size_mb=10)
+            if not is_valid:
+                raise serializers.ValidationError(error)
+        
+        return value
     
     def update(self, instance, validated_data):
         items_data = validated_data.pop('items', None)
+        proforma_file = validated_data.pop('proforma_file', None)
+        
+        # Upload new proforma file to Cloudinary if provided
+        if proforma_file:
+            proforma_file_url = upload_file_to_cloudinary(
+                proforma_file,
+                folder=f'procure-to-pay/{instance.organization.id}/proformas'
+            )
+            if not proforma_file_url:
+                raise serializers.ValidationError({
+                    'proforma_file': 'Failed to upload file to Cloudinary. Please try again.'
+                })
+            validated_data['proforma_file_url'] = proforma_file_url
         
         # Update request fields
         for attr, value in validated_data.items():
@@ -143,5 +204,19 @@ class RejectRequestSerializer(serializers.Serializer):
 
 class SubmitReceiptSerializer(serializers.Serializer):
     """Submit receipt serializer"""
-    receipt_file_url = serializers.URLField(required=True)
+    receipt_file = serializers.FileField(required=True)
+    
+    def validate_receipt_file(self, value):
+        """Validate receipt file"""
+        # Validate file type
+        is_valid, error = validate_file_type(value)
+        if not is_valid:
+            raise serializers.ValidationError(error)
+        
+        # Validate file size (10MB max)
+        is_valid, error = validate_file_size(value, max_size_mb=10)
+        if not is_valid:
+            raise serializers.ValidationError(error)
+        
+        return value
 

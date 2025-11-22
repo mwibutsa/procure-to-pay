@@ -32,6 +32,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ghcr.io/${{ github.repository }}/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -40,8 +49,10 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             cd /opt/procure-to-pay
-            docker-compose pull backend
-            docker-compose up -d --no-deps backend
-            docker-compose exec -T backend python manage.py migrate
-            docker-compose restart backend
+            git pull origin main || true
+            docker compose pull backend frontend
+            docker compose up -d --no-deps backend frontend
+            docker compose exec -T backend python manage.py migrate
+            docker compose exec -T backend python manage.py collectstatic --noinput
+            docker compose restart backend frontend
 

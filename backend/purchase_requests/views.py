@@ -173,6 +173,8 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def submit_receipt(self, request, pk=None):
         """Submit receipt for a purchase request"""
+        from .utils import upload_file_to_cloudinary
+        
         request_obj = self.get_object()
         serializer = SubmitReceiptSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -183,8 +185,21 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Upload receipt file to Cloudinary
+        receipt_file = serializer.validated_data['receipt_file']
+        receipt_file_url = upload_file_to_cloudinary(
+            receipt_file,
+            folder=f'procure-to-pay/{request_obj.organization.id}/receipts'
+        )
+        
+        if not receipt_file_url:
+            return Response(
+                {'detail': 'Failed to upload receipt file. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
         # Update receipt file URL
-        request_obj.receipt_file_url = serializer.validated_data['receipt_file_url']
+        request_obj.receipt_file_url = receipt_file_url
         request_obj.updated_by = request.user
         request_obj.save()
         
