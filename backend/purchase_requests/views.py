@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.mixins import CreateModelMixin
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from datetime import timedelta
@@ -32,28 +33,38 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user role and organization"""
-        queryset = PurchaseRequest.objects.filter(
+        base_queryset = PurchaseRequest.objects.filter(
             organization=self.request.user.organization
         )
         
         # Role-based filtering
         if self.request.user.role == self.request.user.Role.STAFF:
             # Staff can only see their own requests
-            queryset = queryset.filter(created_by=self.request.user)
+            queryset = base_queryset.filter(created_by=self.request.user)
         elif self.request.user.role == self.request.user.Role.APPROVER:
             # Approvers can see pending requests they can act on + their reviewed requests
+            # Get IDs from both querysets and then filter
             pending = ApprovalWorkflowService.get_pending_requests_for_approver(self.request.user)
             reviewed = PurchaseRequest.objects.filter(
                 organization=self.request.user.organization,
                 approvals__approver=self.request.user
             ).distinct()
-            queryset = pending.union(reviewed)
+            
+            # Get IDs from both querysets
+            pending_ids = list(pending.values_list('id', flat=True))
+            reviewed_ids = list(reviewed.values_list('id', flat=True))
+            all_ids = list(set(pending_ids + reviewed_ids))
+            
+            # Filter by IDs to avoid union() which doesn't support select_related
+            queryset = base_queryset.filter(id__in=all_ids)
         elif self.request.user.role == self.request.user.Role.FINANCE:
             # Finance can see approved requests (or all if configured)
             if self.request.user.organization.finance_can_see_all:
-                queryset = queryset
+                queryset = base_queryset
             else:
-                queryset = queryset.filter(status=PurchaseRequest.Status.APPROVED)
+                queryset = base_queryset.filter(status=PurchaseRequest.Status.APPROVED)
+        else:
+            queryset = base_queryset
         
         # Additional filtering
         status_filter = self.request.query_params.get('status')
@@ -71,6 +82,7 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         if amount_max:
             queryset = queryset.filter(amount__lte=amount_max)
         
+        # Apply select_related and prefetch_related at the end
         return queryset.select_related('organization', 'created_by', 'updated_by').prefetch_related(
             'items', 'approvals__approver', 'documents'
         )
@@ -82,6 +94,17 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         elif self.action in ['update', 'partial_update']:
             return PurchaseRequestUpdateSerializer
         return PurchaseRequestSerializer
+    
+    def create(self, request, *args, **kwargs):
+        """Override create to return full serializer data"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        # Use full serializer for response to include all fields
+        instance = serializer.instance
+        response_serializer = PurchaseRequestSerializer(instance)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
     def get_permissions(self):
         """Return appropriate permissions based on action"""
@@ -101,6 +124,17 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
             organization=self.request.user.organization,
             created_by=self.request.user
         )
+    
+    def create(self, request, *args, **kwargs):
+        """Override create to return full serializer data"""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        # Use full serializer for response to include all fields
+        instance = serializer.instance
+        response_serializer = PurchaseRequestSerializer(instance)
+        headers = self.get_success_headers(response_serializer.data)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
     
     def update(self, request, *args, **kwargs):
         """Update purchase request (only if pending)"""
