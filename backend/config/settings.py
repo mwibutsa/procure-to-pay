@@ -260,3 +260,28 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+
+
+# Test Configuration
+import sys
+if 'test' in sys.argv or 'pytest' in sys.argv[0]:
+    # Use in-memory database for faster tests
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:'
+    }
+    
+    # Make Celery tasks run synchronously during tests
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+    
+    # Disable email sending in tests
+    EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+    
+    # Disable migrations for faster tests (optional, can be enabled if needed)
+    # class DisableMigrations:
+    #     def __contains__(self, item):
+    #         return True
+    #     def __getitem__(self, item):
+    #         return None
+    # MIGRATION_MODULES = DisableMigrations()

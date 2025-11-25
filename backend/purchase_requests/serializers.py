@@ -117,11 +117,16 @@ class PurchaseRequestCreateSerializer(serializers.ModelSerializer):
                     'proforma_file': 'Failed to upload file to Cloudinary. Please try again.'
                 })
         
+        # organization and created_by are passed as kwargs from perform_create
+        # Extract them if present, otherwise get from context
+        organization = validated_data.pop('organization', None) or self.context['request'].user.organization
+        created_by = validated_data.pop('created_by', None) or self.context['request'].user
+        
         request = PurchaseRequest.objects.create(
             proforma_file_url=proforma_file_url,
-            **validated_data,
-            organization=self.context['request'].user.organization,
-            created_by=self.context['request'].user
+            organization=organization,
+            created_by=created_by,
+            **validated_data
         )
         
         # Create items

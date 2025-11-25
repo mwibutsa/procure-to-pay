@@ -85,8 +85,14 @@ class PurchaseRequest(models.Model):
 
     @property
     def can_be_updated(self):
-        """Check if request can be updated (only if pending)"""
-        return self.status == self.Status.PENDING
+        """Check if request can be updated (only if pending and no approvals yet)"""
+        # Cannot update if status is not pending
+        if self.status != self.Status.PENDING:
+            return False
+        # Cannot update if any approval has been made (even if still pending)
+        if self.approvals.exists():
+            return False
+        return True
 
     def get_required_approval_levels(self):
         """Get the number of required approval levels from organization"""
