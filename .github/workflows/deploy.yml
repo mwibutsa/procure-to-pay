@@ -54,7 +54,16 @@ jobs:
           timeout: 30s
           script: |
             cd /opt/procure-to-pay
+            # Configure git remote to use HTTPS instead of SSH
+            git remote set-url origin https://github.com/${{ github.repository }}.git || true
+            # Pull latest code (skip if fails, we'll use existing code)
             git pull origin main || true
+            # Set image environment variables
+            export BACKEND_IMAGE=ghcr.io/${{ github.actor }}/procure-to-pay-backend:latest
+            export FRONTEND_IMAGE=ghcr.io/${{ github.actor }}/procure-to-pay-frontend:latest
+            # Login to GitHub Container Registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Pull and deploy
             docker compose pull backend frontend
             docker compose up -d --no-deps backend frontend
             docker compose exec -T backend python manage.py migrate || true
