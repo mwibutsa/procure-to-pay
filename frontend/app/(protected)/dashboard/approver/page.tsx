@@ -107,8 +107,10 @@ export default function ApproverDashboard() {
       setSelectedRequest(null);
       setApproveComments("");
       refetchPending();
-    } catch {
-      message.error("Failed to approve request. Please try again.");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to approve request";
+      message.error(errorMessage);
     }
   };
 
@@ -130,8 +132,10 @@ export default function ApproverDashboard() {
       setSelectedRequest(null);
       setRejectComments("");
       refetchPending();
-    } catch {
-      message.error("Failed to reject request. Please try again.");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to reject request";
+      message.error(errorMessage);
     }
   };
 
@@ -498,6 +502,7 @@ export default function ApproverDashboard() {
           dataSource={pendingData?.results || []}
           loading={pendingLoading || statsLoading}
           rowKey="id"
+          scroll={{ x: "max-content" }}
           pagination={{
             current: pendingData?.current_page || page,
             total: pendingData?.count || 0,
@@ -524,6 +529,7 @@ export default function ApproverDashboard() {
           dataSource={myHistory}
           loading={historyLoading}
           rowKey="id"
+          scroll={{ x: "max-content" }}
           pagination={{
             pageSize: 10,
             showTotal: (total, range) =>

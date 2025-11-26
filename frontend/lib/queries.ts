@@ -149,8 +149,8 @@ export const useUpdatePurchaseRequest = () => {
 export const useApproveRequest = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({ id, comments }: { id: string; comments?: string }) => {
+  return useMutation<unknown, Error, { id: string; comments?: string }>({
+    mutationFn: async ({ id, comments }) => {
       const response = await api.patch(`/requests/${id}/approve/`, {
         comments: comments || "",
       });
@@ -163,14 +163,17 @@ export const useApproveRequest = () => {
         queryKey: ["purchase-request", variables.id],
       });
     },
+    onError: (error) => {
+      console.error("Approve request failed:", error);
+    },
   });
 };
 
 export const useRejectRequest = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({ id, comments }: { id: string; comments: string }) => {
+  return useMutation<unknown, Error, { id: string; comments: string }>({
+    mutationFn: async ({ id, comments }) => {
       const response = await api.patch(`/requests/${id}/reject/`, { comments });
       return response.data;
     },
@@ -180,6 +183,9 @@ export const useRejectRequest = () => {
       queryClient.invalidateQueries({
         queryKey: ["purchase-request", variables.id],
       });
+    },
+    onError: (error) => {
+      console.error("Reject request failed:", error);
     },
   });
 };

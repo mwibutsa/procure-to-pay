@@ -502,6 +502,7 @@ export default function FinanceDashboard() {
           dataSource={data?.results || []}
           loading={isLoading || statsLoading}
           rowKey="id"
+          scroll={{ x: "max-content" }}
           pagination={{
             current: data?.current_page || page,
             total: data?.count || 0,
