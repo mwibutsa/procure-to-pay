@@ -1,10 +1,12 @@
+import { EDocumentType, EPurchaseRequestStatus, EUserRole } from "@/enums";
+
 // User types
 export interface User {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
-  role: "STAFF" | "APPROVER" | "FINANCE";
+  role: EUserRole;
   approval_level: number | null;
   organization: string;
   organization_name: string;
@@ -34,7 +36,7 @@ export interface Approval {
 
 export interface Document {
   id: string;
-  document_type: "PROFORMA" | "PO" | "RECEIPT";
+  document_type: EDocumentType;
   file_url: string;
   extracted_data: Record<string, unknown>;
   created_at: string;
@@ -47,7 +49,7 @@ export interface PurchaseRequest {
   title: string;
   description: string;
   amount: number;
-  status: "PENDING" | "APPROVED" | "REJECTED" | "DISCREPANCY";
+  status: EPurchaseRequestStatus;
   created_by: string;
   created_by_email: string;
   created_by_name: string;
@@ -96,3 +98,31 @@ export interface ApiError {
   message?: string;
   errors?: Record<string, string[]>;
 }
+
+// Statistics types
+export interface StaffStatistics {
+  total_requests: number;
+  pending_approval: number;
+  approved: number;
+  rejected: number;
+  total_amount: number;
+}
+
+export interface ApproverStatistics {
+  pending_my_action: number;
+  approved_this_month: number;
+  rejected_this_month: number;
+  total_reviewed: number;
+}
+
+export interface FinanceStatistics {
+  total_approved_requests: number;
+  total_amount_approved: number;
+  pending_payments: number;
+  receipts_pending: number;
+}
+
+export type Statistics =
+  | StaffStatistics
+  | ApproverStatistics
+  | FinanceStatistics;

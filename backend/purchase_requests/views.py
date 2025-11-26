@@ -6,8 +6,8 @@ from rest_framework.mixins import CreateModelMixin
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Q
-from .models import PurchaseRequest
+from django.db.models import Q, Sum
+from .models import PurchaseRequest, Approval
 from .serializers import (
     PurchaseRequestSerializer,
     PurchaseRequestCreateSerializer,
@@ -243,3 +243,114 @@ class PurchaseRequestViewSet(viewsets.ModelViewSet):
         return Response({
             'detail': 'Receipt submitted successfully. Validation in progress.'
         }, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Get dashboard statistics based on user role"""
+        user = request.user
+        organization = user.organization
+        
+        if user.role == user.Role.STAFF:
+            # Staff statistics
+            base_queryset = PurchaseRequest.objects.filter(
+                organization=organization,
+                created_by=user
+            )
+            
+            total_requests = base_queryset.count()
+            pending_approval = base_queryset.filter(status=PurchaseRequest.Status.PENDING).count()
+            approved = base_queryset.filter(status=PurchaseRequest.Status.APPROVED).count()
+            rejected = base_queryset.filter(status=PurchaseRequest.Status.REJECTED).count()
+            
+            # Calculate total amount for approved requests
+            total_amount_result = base_queryset.filter(
+                status=PurchaseRequest.Status.APPROVED
+            ).aggregate(total=Sum('amount'))
+            total_amount = float(total_amount_result['total'] or 0)
+            
+            return Response({
+                'total_requests': total_requests,
+                'pending_approval': pending_approval,
+                'approved': approved,
+                'rejected': rejected,
+                'total_amount': total_amount
+            })
+        
+        elif user.role == user.Role.APPROVER:
+            # Approver statistics
+            # Pending requests at user's approval level
+            pending_requests = ApprovalWorkflowService.get_pending_requests_for_approver(user)
+            pending_my_action = pending_requests.count()
+            
+            # Get current month start
+            now = timezone.now()
+            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            
+            # Approved by me this month
+            approved_this_month = Approval.objects.filter(
+                approver=user,
+                action=Approval.Action.APPROVED,
+                timestamp__gte=month_start
+            ).count()
+            
+            # Rejected by me this month
+            rejected_this_month = Approval.objects.filter(
+                approver=user,
+                action=Approval.Action.REJECTED,
+                timestamp__gte=month_start
+            ).count()
+            
+            # Total reviewed by me
+            total_reviewed = Approval.objects.filter(approver=user).count()
+            
+            return Response({
+                'pending_my_action': pending_my_action,
+                'approved_this_month': approved_this_month,
+                'rejected_this_month': rejected_this_month,
+                'total_reviewed': total_reviewed
+            })
+        
+        elif user.role == user.Role.FINANCE:
+            # Finance statistics
+            if organization.finance_can_see_all:
+                base_queryset = PurchaseRequest.objects.filter(organization=organization)
+            else:
+                base_queryset = PurchaseRequest.objects.filter(
+                    organization=organization,
+                    status=PurchaseRequest.Status.APPROVED
+                )
+            
+            total_approved_requests = base_queryset.filter(
+                status=PurchaseRequest.Status.APPROVED
+            ).count()
+            
+            # Total amount approved
+            total_amount_result = base_queryset.filter(
+                status=PurchaseRequest.Status.APPROVED
+            ).aggregate(total=Sum('amount'))
+            total_amount_approved = float(total_amount_result['total'] or 0)
+            
+            # Pending payments (approved requests without receipt)
+            pending_payments = base_queryset.filter(
+                status=PurchaseRequest.Status.APPROVED,
+                receipt_file_url__isnull=True
+            ).count()
+            
+            # Receipts pending (approved requests with receipt but not validated)
+            receipts_pending = base_queryset.filter(
+                status=PurchaseRequest.Status.APPROVED,
+                receipt_file_url__isnull=False
+            ).exclude(status=PurchaseRequest.Status.DISCREPANCY).count()
+            
+            return Response({
+                'total_approved_requests': total_approved_requests,
+                'total_amount_approved': total_amount_approved,
+                'pending_payments': pending_payments,
+                'receipts_pending': receipts_pending
+            })
+        
+        else:
+            return Response(
+                {'detail': 'Statistics not available for this role.'},
+                status=status.HTTP_403_FORBIDDEN
+            )

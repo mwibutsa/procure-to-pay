@@ -26,13 +26,17 @@ def login_view(request):
         'access': str(refresh.access_token),
     }, status=status.HTTP_200_OK)
     
+    # Determine if we're in development (localhost)
+    is_localhost = 'localhost' in request.get_host() or '127.0.0.1' in request.get_host()
+    
     response.set_cookie(
         'refresh_token',
         str(refresh),
         httponly=True,
-        secure=not request.get_host().startswith('localhost'),
-        samesite='Lax',
-        max_age=60 * 60 * 24 * 7  # 7 days
+        secure=False,  # Set to False for localhost, True in production
+        samesite='Lax',  # Lax works for same-site requests
+        max_age=60 * 60 * 24 * 7,  # 7 days
+        path='/',  # Available for all paths
     )
     
     return response
@@ -68,13 +72,17 @@ def refresh_token_view(request):
         # Rotate refresh token
         refresh.set_jti()
         refresh.set_exp()
+        # Determine if we're in development (localhost)
+        is_localhost = 'localhost' in request.get_host() or '127.0.0.1' in request.get_host()
+        
         response.set_cookie(
             'refresh_token',
             str(refresh),
             httponly=True,
-            secure=not request.get_host().startswith('localhost'),
-            samesite='Lax',
-            max_age=60 * 60 * 24 * 7  # 7 days
+            secure=False,  # Set to False for localhost, True in production
+            samesite='Lax',  # Lax works for same-site requests
+            max_age=60 * 60 * 24 * 7,  # 7 days
+            path='/',  # Available for all paths
         )
         
         return response
