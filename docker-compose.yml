@@ -26,6 +26,7 @@ services:
       retries: 5
 
   backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -48,6 +49,7 @@ services:
     restart: unless-stopped
 
   frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-frontend:latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -62,6 +64,7 @@ services:
     restart: unless-stopped
 
   celery:
+    image: ${BACKEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -81,6 +84,7 @@ services:
     restart: unless-stopped
 
   celery-beat:
+    image: ${BACKEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
