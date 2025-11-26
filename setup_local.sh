@@ -79,7 +79,8 @@ cd frontend
 # Install dependencies
 if [ ! -d "node_modules" ]; then
     echo "Installing Node.js dependencies..."
-    npm install
+    corepack enable
+    yarn install
 fi
 
 # Create .env.local if it doesn't exist
@@ -95,7 +96,7 @@ echo "✅ Frontend setup complete!"
 echo ""
 echo "📝 To start the application:"
 echo "1. Backend: cd backend && source venv/bin/activate && python manage.py runserver"
-echo "2. Frontend: cd frontend && npm run dev"
+echo "2. Frontend: cd frontend && yarn dev"
 echo ""
-echo "🎉 Setup complete! See QUICK_START.md for detailed instructions."
+echo "🎉 Setup complete! See README.md for detailed instructions."
 

@@ -1,265 +1,179 @@
 # Procure-to-Pay System
 
-A comprehensive Purchase Request & Approval System built with Django REST Framework and Next.js.
+A purchase request and approval workflow system with AI-powered document processing.
 
-## Features
+## Live Demo
 
-- **Multi-tenant Architecture**: Organization-based isolation
-- **Role-Based Access Control**: Staff, Approver (multi-level), Finance
-- **Sequential Approval Workflow**: Configurable approval levels with sequential enforcement
-- **AI-Powered Document Processing**: Google Gemini API for proforma, PO generation, and receipt validation
-- **File Management**: Cloudinary integration for file uploads
-- **Email Notifications**: Automated notifications for approval/rejection events
-- **Caching**: Redis for performance optimization
-- **API Documentation**: Swagger/OpenAPI documentation
+- **Frontend:** http://161.97.80.247
+- **API Docs:** http://161.97.80.247/api/docs/
+- **Admin:** http://161.97.80.247/admin/
 
 ## Tech Stack
 
-### Backend
+**Backend:** Django 5.2, Django REST Framework, PostgreSQL, Redis, Celery  
+**Frontend:** Next.js 16, React 19, Ant Design, TailwindCSS, TanStack Query  
+**AI:** Google Gemini API for document extraction  
+**File Storage:** Cloudinary
 
-- Django 5.2.8
-- Django REST Framework
-- PostgreSQL
-- Redis
-- Celery
-- Google Gemini API
-- Cloudinary
+## Quick Start (Docker)
 
-### Frontend
-
-- Next.js 14+
-- React Query (TanStack Query)
-- Ant Design
-- Tailwind CSS
-
-## Prerequisites
-
-- Python 3.11+
-- Node.js 18+
-- PostgreSQL
-- Redis
-- Docker & Docker Compose (optional)
-
-## Setup Instructions
-
-### Backend Setup
-
-1. Clone the repository:
+### 1. Clone & Setup Environment
 
 ```bash
 git clone <repository-url>
 cd procure-to-pay
+cp .env.example .env
 ```
 
-2. Create virtual environment:
-
-```bash
-cd backend
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-4. Create `.env` file in `backend/` directory:
+### 2. Configure `.env`
 
 ```env
-SECRET_KEY=your-secret-key
-DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
-
+# Database
 DB_NAME=procure_to_pay
 DB_USER=postgres
-DB_PASSWORD=postgres
-DB_HOST=localhost
+DB_PASSWORD=your_secure_password
+DB_HOST=db
 DB_PORT=5432
 
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
+# Django
+SECRET_KEY=your-secret-key-here
+DEBUG=False
+ALLOWED_HOSTS=localhost,127.0.0.1,161.97.80.247
 
-GEMINI_API_KEY=your-gemini-api-key
+# CORS & CSRF
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://161.97.80.247
+CSRF_TRUSTED_ORIGINS=http://localhost:3000,http://161.97.80.247
 
-REDIS_URL=redis://127.0.0.1:6379/1
-CELERY_BROKER_URL=redis://127.0.0.1:6379/0
-CELERY_RESULT_BACKEND=redis://127.0.0.1:6379/0
+# Cloudinary (file uploads)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USE_TLS=True
-EMAIL_HOST_USER=your-email@gmail.com
-EMAIL_HOST_PASSWORD=your-app-password
-DEFAULT_FROM_EMAIL=noreply@procuretopay.com
+# Google AI (document processing)
+GEMINI_API_KEY=your_gemini_api_key
+
+# Frontend
+NEXT_PUBLIC_API_URL=http://161.97.80.247/api
 ```
 
-5. Run migrations:
-
-```bash
-python manage.py migrate
-```
-
-6. Create superuser:
-
-```bash
-python manage.py createsuperuser
-```
-
-7. Run development server:
-
-```bash
-python manage.py runserver
-```
-
-8. Run Celery worker (in separate terminal):
-
-```bash
-celery -A config worker -l info
-```
-
-### Frontend Setup
-
-1. Navigate to frontend directory:
-
-```bash
-cd frontend
-```
-
-2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Create `.env.local` file:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000/api
-```
-
-4. Run development server:
-
-```bash
-npm run dev
-```
-
-### Docker Setup
-
-1. Create `.env` file in root directory (same as backend `.env`)
-
-2. Build and run:
+### 3. Run with Docker
 
 ```bash
 docker-compose up --build
 ```
 
-3. Run migrations:
+**Access:**
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000/api
+- API Docs: http://localhost:8000/api/docs/
 
-```bash
-docker-compose exec backend python manage.py migrate
-```
-
-4. Create superuser:
+### 4. Create Initial Users
 
 ```bash
 docker-compose exec backend python manage.py createsuperuser
 ```
 
-## API Documentation
-
-Once the backend is running, access the API documentation at:
-
-- Swagger UI: `http://localhost:8000/api/docs/`
-- Schema: `http://localhost:8000/api/schema/`
-
-## API Endpoints
-
-### Authentication
-
-- `POST /api/auth/login/` - Login
-- `POST /api/auth/logout/` - Logout
-- `POST /api/auth/refresh/` - Refresh token
-- `GET /api/auth/me/` - Get current user
-
-### Purchase Requests
-
-- `POST /api/requests/` - Create request (Staff)
-- `GET /api/requests/` - List requests (filtered by role)
-- `GET /api/requests/{id}/` - Get request details
-- `PUT /api/requests/{id}/` - Update request (Staff, if pending)
-- `PATCH /api/requests/{id}/approve/` - Approve request (Approver)
-- `PATCH /api/requests/{id}/reject/` - Reject request (Approver)
-- `POST /api/requests/{id}/submit-receipt/` - Submit receipt (Staff)
+Or via Django Admin at http://localhost:8000/admin/
 
 ## User Roles
 
-- **Staff**: Can create and view their own requests, submit receipts
-- **Approver**: Can view pending requests at their level, approve/reject requests
-- **Finance**: Can view approved requests
+| Role | Permissions |
+|------|-------------|
+| **Staff** | Create requests, upload receipts, view own requests |
+| **Approver Level 1** | Approve/reject requests (first level) |
+| **Approver Level 2** | Approve/reject requests (final level) |
+| **Finance** | View approved requests, manage documents |
+
+## API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/login/` | Login |
+| POST | `/api/auth/logout/` | Logout |
+| GET | `/api/auth/me/` | Current user |
+| GET | `/api/requests/` | List requests |
+| POST | `/api/requests/` | Create request |
+| GET | `/api/requests/{id}/` | Request details |
+| PUT | `/api/requests/{id}/` | Update request |
+| PATCH | `/api/requests/{id}/approve/` | Approve request |
+| PATCH | `/api/requests/{id}/reject/` | Reject request |
+| POST | `/api/requests/{id}/submit-receipt/` | Submit receipt |
+| GET | `/api/requests/statistics/` | Dashboard stats |
+
+Full API documentation available at `/api/docs/` (Swagger UI).
 
 ## Approval Workflow
 
-1. Staff creates a purchase request
-2. Request goes through sequential approval levels (configurable per organization)
-3. Each approver at their level can approve or reject
-4. If all levels approve, request is automatically approved and PO is generated
-5. Staff can submit receipt after approval
-6. Receipt is validated against PO, discrepancies are flagged
+1. Staff creates purchase request with optional proforma invoice
+2. Level 1 approver reviews and approves/rejects
+3. Level 2 approver gives final approval
+4. Upon final approval, Purchase Order is auto-generated
+5. Staff uploads receipt after purchase
+6. System validates receipt against PO (AI-powered)
 
-## Deployment
+## Local Development (Without Docker)
 
-### GitHub Actions
-
-The project includes a GitHub Actions workflow for automated deployment to VPS.
-
-Required secrets:
-
-- `VPS_HOST`: VPS hostname or IP
-- `VPS_USER`: SSH username
-- `VPS_SSH_KEY`: SSH private key
-
-### Manual Deployment
-
-1. Build Docker image:
-
-```bash
-docker build -t procure-to-pay-backend ./backend
-```
-
-2. Push to registry:
-
-```bash
-docker tag procure-to-pay-backend ghcr.io/username/procure-to-pay/backend:latest
-docker push ghcr.io/username/procure-to-pay/backend:latest
-```
-
-3. On VPS, pull and run:
-
-```bash
-docker-compose pull
-docker-compose up -d
-```
-
-## Environment Variables
-
-See `.env.example` for all required environment variables.
-
-## Testing
-
-Run tests:
+### Backend
 
 ```bash
 cd backend
-python manage.py test
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+### Frontend
+
+```bash
+cd frontend
+yarn install
+yarn dev
+```
+
+## VPS Deployment
+
+### 1. Setup Nginx
+
+```bash
+# Copy nginx config
+sudo cp nginx.conf /etc/nginx/sites-available/procure-to-pay
+sudo ln -s /etc/nginx/sites-available/procure-to-pay /etc/nginx/sites-enabled/
+sudo rm /etc/nginx/sites-enabled/default  # Remove default site
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### 2. Deploy with Docker
+
+```bash
+cd /opt/procure-to-pay
+docker-compose up -d --build
+```
+
+### 3. Create Admin User
+
+```bash
+docker-compose exec backend python manage.py createsuperuser
+```
+
+## Project Structure
+
+```
+├── backend/
+│   ├── config/          # Django settings
+│   ├── users/           # Authentication & user management
+│   ├── purchase_requests/  # Core business logic
+│   ├── documents/       # AI document processing
+│   ├── organizations/   # Multi-tenancy
+│   └── notifications/   # Email notifications
+├── frontend/
+│   ├── app/            # Next.js pages
+│   ├── components/     # Reusable UI components
+│   └── lib/            # API, queries, utilities
+└── docker-compose.yml
 ```
 
 ## License
 
-This project is for assessment purposes.
-
-## Contact
-
-For issues or questions, please contact the development team.
+MIT

@@ -2,17 +2,21 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install yarn v4.12.0
-RUN corepack enable && yarn set version 4.12.0
+# Enable corepack for yarn
+RUN corepack enable
 
-# Copy package and yarn files
-COPY package.json yarn.lock ./
+# Copy package files first for better caching
+COPY package.json yarn.lock .yarnrc.yml* ./
 
 # Install dependencies
-RUN yarn install --immutable
+RUN yarn install --immutable || yarn install
 
 # Copy source code
 COPY . .
+
+# Build arguments for environment variables
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 # Build Next.js app
 RUN yarn build
@@ -24,20 +28,22 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install yarn v4.12.0
-RUN corepack enable && yarn set version 4.12.0
+RUN corepack enable
 
-# Copy built application and yarn files
-COPY --from=builder /app/.next ./.next
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy built application
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/yarn.lock ./
 
-# Install production dependencies only
-RUN yarn install --immutable --production
+USER nextjs
 
-# Expose port
 EXPOSE 3000
 
-# Start Next.js
-CMD ["yarn", "start"]
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+CMD ["node", "server.js"]
