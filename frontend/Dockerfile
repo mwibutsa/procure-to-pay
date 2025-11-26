@@ -2,17 +2,20 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Install yarn v4.12.0
+RUN corepack enable && yarn set version 4.12.0
+
+# Copy package and yarn files
+COPY package.json yarn.lock ./
 
 # Install dependencies
-RUN npm ci
+RUN yarn install --immutable
 
 # Copy source code
 COPY . .
 
 # Build Next.js app
-RUN npm run build
+RUN yarn build
 
 # Production image
 FROM node:20-alpine AS runner
@@ -21,17 +24,20 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Copy built application
+# Install yarn v4.12.0
+RUN corepack enable && yarn set version 4.12.0
+
+# Copy built application and yarn files
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/yarn.lock ./
 
 # Install production dependencies only
-RUN npm ci --only=production
+RUN yarn install --immutable --production
 
 # Expose port
 EXPOSE 3000
 
 # Start Next.js
-CMD ["npm", "start"]
-
+CMD ["yarn", "start"]
