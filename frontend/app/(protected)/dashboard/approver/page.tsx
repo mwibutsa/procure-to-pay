@@ -18,7 +18,6 @@ import {
   CheckOutlined,
   CloseOutlined,
   EyeOutlined,
-  FileTextOutlined,
   DownloadOutlined,
 } from "@ant-design/icons";
 import { usePurchaseRequests, useStatistics } from "@/lib/queries";
@@ -47,7 +46,8 @@ export default function ApproverDashboard() {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [approveModalOpen, setApproveModalOpen] = useState(false);
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<PurchaseRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] =
+    useState<PurchaseRequest | null>(null);
   const [approveComments, setApproveComments] = useState("");
   const [rejectComments, setRejectComments] = useState("");
 
@@ -143,117 +143,25 @@ export default function ApproverDashboard() {
     });
   };
 
-  // Expandable row content showing request details
-  const expandedRowRender = (record: PurchaseRequest) => (
-    <div className="p-4 bg-gray-50 rounded-lg">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <h4 className="font-semibold text-gray-700 mb-2">Request Details</h4>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Title:</span> {record.title}
-          </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Description:</span> {record.description}
-          </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Amount:</span>{" "}
-            <span className="text-blue-600 font-semibold">
-              {formatCurrency(record.amount)}
-            </span>
-          </p>
-        </div>
-        <div>
-          <h4 className="font-semibold text-gray-700 mb-2">Approval Info</h4>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Approval Progress:</span>{" "}
-            {record.current_approval_level} of {record.required_approval_levels} levels
-          </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Submitted:</span> {formatDate(record.created_at)}
-          </p>
-        </div>
-      </div>
-
-      {/* Line Items */}
-      {record.items && record.items.length > 0 && (
-        <div className="mb-4">
-          <h4 className="font-semibold text-gray-700 mb-2">Line Items</h4>
-          <Table
-            dataSource={record.items.map((item, idx) => ({ ...item, key: idx }))}
-            columns={[
-              { title: "Description", dataIndex: "description", key: "description" },
-              { title: "Quantity", dataIndex: "quantity", key: "quantity" },
-              {
-                title: "Unit Price",
-                dataIndex: "unit_price",
-                key: "unit_price",
-                render: (price: number) => formatCurrency(price),
-              },
-              {
-                title: "Total",
-                dataIndex: "total",
-                key: "total",
-                render: (total: number) => (
-                  <span className="font-semibold">{formatCurrency(total)}</span>
-                ),
-              },
-            ]}
-            pagination={false}
-            size="small"
-          />
-        </div>
-      )}
-
-      {/* Documents */}
-      <div className="flex gap-2">
-        {record.proforma_file_url && (
-          <Button
-            icon={<FileTextOutlined />}
-            size="small"
-            onClick={() => window.open(record.proforma_file_url!, "_blank")}
-          >
-            View Proforma
-          </Button>
-        )}
-        <Button
-          type="primary"
-          icon={<CheckOutlined />}
-          size="small"
-          onClick={() => openApproveModal(record)}
-        >
-          Approve
-        </Button>
-        <Button
-          danger
-          icon={<CloseOutlined />}
-          size="small"
-          onClick={() => openRejectModal(record)}
-        >
-          Reject
-        </Button>
-      </div>
-    </div>
-  );
-
   const pendingColumns: ColumnsType<PurchaseRequest> = [
     {
-      title: "REQUEST ID",
+      title: "Request ID",
       dataIndex: "id",
       key: "id",
       render: (id: string) => (
-        <span className="font-mono text-sm">#{id.slice(0, 8).toUpperCase()}</span>
+        <span className="font-mono text-sm">
+          #{id.slice(0, 8).toUpperCase()}
+        </span>
       ),
     },
     {
-      title: "TITLE",
+      title: "Title",
       dataIndex: "title",
       key: "title",
-      render: (title: string) => (
-        <span className="font-medium">{title}</span>
-      ),
+      render: (title: string) => <span className="font-medium">{title}</span>,
     },
     {
-      title: "SUBMITTER",
+      title: "Submitter",
       dataIndex: "created_by_name",
       key: "created_by_name",
       render: (name: string, record: PurchaseRequest) => (
@@ -264,21 +172,23 @@ export default function ApproverDashboard() {
       ),
     },
     {
-      title: "AMOUNT",
+      title: "Amount",
       dataIndex: "amount",
       key: "amount",
       render: (amount: number | string) => (
-        <span className="font-semibold text-blue-600">{formatCurrency(amount)}</span>
+        <span className="font-semibold text-blue-600">
+          {formatCurrency(amount)}
+        </span>
       ),
     },
     {
-      title: "SUBMITTED",
+      title: "Submitted",
       dataIndex: "created_at",
       key: "created_at",
       render: (date: string) => formatDate(date),
     },
     {
-      title: "PROFORMA",
+      title: "Proforma",
       key: "proforma",
       render: (_: unknown, record: PurchaseRequest) =>
         record.proforma_file_url ? (
@@ -298,40 +208,31 @@ export default function ApproverDashboard() {
         ),
     },
     {
-      title: "ACTIONS",
+      title: "Actions",
       key: "actions",
       render: (_: unknown, record: PurchaseRequest) => (
         <Space>
           <Button
             type="default"
-            size="small"
             icon={<EyeOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              openDetailsModal(record);
-            }}
+            style={{ height: 32 }}
+            onClick={() => openDetailsModal(record)}
           >
             Details
           </Button>
           <Button
             danger
-            size="small"
             icon={<CloseOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              openRejectModal(record);
-            }}
+            style={{ height: 32 }}
+            onClick={() => openRejectModal(record)}
           >
             Reject
           </Button>
           <Button
             type="primary"
-            size="small"
+            style={{ height: 32 }}
             icon={<CheckOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              openApproveModal(record);
-            }}
+            onClick={() => openApproveModal(record)}
           >
             Approve
           </Button>
@@ -342,27 +243,29 @@ export default function ApproverDashboard() {
 
   const historyColumns: ColumnsType<PurchaseRequest> = [
     {
-      title: "REQUEST ID",
+      title: "Request ID",
       dataIndex: "id",
       key: "id",
       render: (id: string) => (
-        <span className="font-mono text-sm">#{id.slice(0, 8).toUpperCase()}</span>
+        <span className="font-mono text-sm">
+          #{id.slice(0, 8).toUpperCase()}
+        </span>
       ),
     },
     {
-      title: "TITLE",
+      title: "Title",
       dataIndex: "title",
       key: "title",
     },
     {
-      title: "SUBMITTER",
+      title: "Submitter",
       dataIndex: "created_by_name",
       key: "created_by_name",
       render: (name: string, record: PurchaseRequest) =>
         name || record.created_by_email,
     },
     {
-      title: "AMOUNT",
+      title: "Amount",
       dataIndex: "amount",
       key: "amount",
       render: (amount: number | string) => (
@@ -370,16 +273,18 @@ export default function ApproverDashboard() {
       ),
     },
     {
-      title: "REVIEWED DATE",
+      title: "Reviewed Date",
       dataIndex: "updated_at",
       key: "updated_at",
       render: (date: string) => formatDate(date),
     },
     {
-      title: "STATUS",
+      title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (status: EPurchaseRequestStatus) => <StatusBadge status={status} />,
+      render: (status: EPurchaseRequestStatus) => (
+        <StatusBadge status={status} />
+      ),
     },
   ];
 
@@ -420,7 +325,8 @@ export default function ApproverDashboard() {
             </span>
           </Descriptions.Item>
           <Descriptions.Item label="Submitted By">
-            {selectedRequest.created_by_name || selectedRequest.created_by_email}
+            {selectedRequest.created_by_name ||
+              selectedRequest.created_by_email}
           </Descriptions.Item>
           <Descriptions.Item label="Submitted On">
             {formatDate(selectedRequest.created_at)}
@@ -438,17 +344,24 @@ export default function ApproverDashboard() {
           <>
             <Divider>Line Items</Divider>
             <Table
-              dataSource={selectedRequest.items.map((item: RequestItem, idx: number) => ({
-                ...item,
-                key: idx,
-              }))}
+              dataSource={selectedRequest.items.map(
+                (item: RequestItem, idx: number) => ({
+                  ...item,
+                  key: idx,
+                })
+              )}
               columns={[
                 {
                   title: "Description",
                   dataIndex: "description",
                   key: "description",
                 },
-                { title: "Qty", dataIndex: "quantity", key: "quantity", width: 60 },
+                {
+                  title: "Qty",
+                  dataIndex: "quantity",
+                  key: "quantity",
+                  width: 60,
+                },
                 {
                   title: "Unit Price",
                   dataIndex: "unit_price",
@@ -460,7 +373,9 @@ export default function ApproverDashboard() {
                   dataIndex: "total",
                   key: "total",
                   render: (total: number) => (
-                    <span className="font-semibold">{formatCurrency(total)}</span>
+                    <span className="font-semibold">
+                      {formatCurrency(total)}
+                    </span>
                   ),
                 },
               ]}
@@ -476,7 +391,9 @@ export default function ApproverDashboard() {
             <Divider>Documents</Divider>
             <Button
               icon={<DownloadOutlined />}
-              onClick={() => window.open(selectedRequest.proforma_file_url!, "_blank")}
+              onClick={() =>
+                window.open(selectedRequest.proforma_file_url!, "_blank")
+              }
             >
               View Proforma Invoice
             </Button>
@@ -502,12 +419,16 @@ export default function ApproverDashboard() {
                       Level {approval.approval_level} -{" "}
                       {approval.approver_name || approval.approver_email}
                     </span>
-                    <Tag color={approval.action === "APPROVED" ? "green" : "red"}>
+                    <Tag
+                      color={approval.action === "APPROVED" ? "green" : "red"}
+                    >
                       {approval.action}
                     </Tag>
                   </div>
                   {approval.comments && (
-                    <p className="text-sm text-gray-600 mt-1">{approval.comments}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {approval.comments}
+                    </p>
                   )}
                   <p className="text-xs text-gray-400 mt-1">
                     {formatDate(approval.timestamp)}
@@ -525,7 +446,9 @@ export default function ApproverDashboard() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Approver Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          Approver Dashboard
+        </h1>
         <p className="text-gray-600">
           Welcome, {user?.email}{" "}
           {user?.approval_level && `(Level ${user.approval_level})`}
@@ -554,7 +477,11 @@ export default function ApproverDashboard() {
       {/* Pending Approvals Section */}
       <Card
         title="Pending Approvals"
-        className="mb-6"
+        styles={{
+          header: { borderBottom: "1px solid #f0f0f0" },
+          body: { padding: "16px" },
+        }}
+        style={{ boxShadow: "none", border: "1px solid #f0f0f0" }}
         extra={
           <Search
             placeholder="Search requests..."
@@ -571,10 +498,6 @@ export default function ApproverDashboard() {
           dataSource={pendingData?.results || []}
           loading={pendingLoading || statsLoading}
           rowKey="id"
-          expandable={{
-            expandedRowRender,
-            rowExpandable: () => true,
-          }}
           pagination={{
             current: pendingData?.current_page || page,
             total: pendingData?.count || 0,
@@ -587,7 +510,15 @@ export default function ApproverDashboard() {
       </Card>
 
       {/* My Approval History Section */}
-      <Card title="My Approval History">
+      <Card
+        title="My Approval History"
+        className="mt-6"
+        styles={{
+          header: { borderBottom: "1px solid #f0f0f0" },
+          body: { padding: "16px" },
+        }}
+        style={{ boxShadow: "none", border: "1px solid #f0f0f0" }}
+      >
         <Table
           columns={historyColumns}
           dataSource={myHistory}
@@ -681,7 +612,9 @@ export default function ApproverDashboard() {
               {formatCurrency(selectedRequest?.amount)}
             </p>
             <p className="text-sm text-gray-500">
-              Submitted by {selectedRequest?.created_by_name || selectedRequest?.created_by_email}
+              Submitted by{" "}
+              {selectedRequest?.created_by_name ||
+                selectedRequest?.created_by_email}
             </p>
           </div>
           <div>
@@ -732,7 +665,9 @@ export default function ApproverDashboard() {
               {formatCurrency(selectedRequest?.amount)}
             </p>
             <p className="text-sm text-gray-500">
-              Submitted by {selectedRequest?.created_by_name || selectedRequest?.created_by_email}
+              Submitted by{" "}
+              {selectedRequest?.created_by_name ||
+                selectedRequest?.created_by_email}
             </p>
           </div>
           <div>

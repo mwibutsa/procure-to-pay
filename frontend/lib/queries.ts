@@ -18,20 +18,18 @@ export const useLogin = () => {
     mutationFn: async (data: { email: string; password: string }) => {
       // Use a separate axios instance for login to avoid interceptor issues
       const loginApi = api;
-      const response = await loginApi.post<{ access: string; user: User } | { detail: string }>(
-        "/auth/login/",
-        data,
-        {
-          // Don't retry on login failures
-          validateStatus: (status) => status < 500,
-        }
-      );
-      
+      const response = await loginApi.post<
+        { access: string; user: User } | { detail: string }
+      >("/auth/login/", data, {
+        // Don't retry on login failures
+        validateStatus: (status) => status < 500,
+      });
+
       if (response.status >= 400) {
         const errorData = response.data as { detail?: string };
         throw new Error(errorData?.detail || "Login failed");
       }
-      
+
       const successData = response.data as { access: string; user: User };
       Cookies.set("access_token", successData.access);
       // Invalidate and refetch user data
@@ -154,12 +152,13 @@ export const useApproveRequest = () => {
   return useMutation({
     mutationFn: async ({ id, comments }: { id: string; comments?: string }) => {
       const response = await api.patch(`/requests/${id}/approve/`, {
-        comments,
+        comments: comments || "",
       });
       return response.data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["purchase-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["statistics"] });
       queryClient.invalidateQueries({
         queryKey: ["purchase-request", variables.id],
       });
@@ -177,6 +176,7 @@ export const useRejectRequest = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["purchase-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["statistics"] });
       queryClient.invalidateQueries({
         queryKey: ["purchase-request", variables.id],
       });

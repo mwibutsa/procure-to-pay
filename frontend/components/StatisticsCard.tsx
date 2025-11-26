@@ -21,19 +21,17 @@ export const StatisticsCard: React.FC<StatisticsCardProps> = ({
   return (
     <Card
       className={`statistics-card ${className || ""}`}
-      hoverable
       style={{
         borderRadius: "8px",
-        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        boxShadow: "none",
+        border: "1px solid #f0f0f0",
       }}
     >
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <p className="text-sm text-gray-600 mb-2">{title}</p>
           <p className="text-3xl font-bold text-gray-900">{value}</p>
-          {subtitle && (
-            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
-          )}
+          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
         </div>
         {icon && (
           <div className="text-4xl opacity-80" style={{ color: "#1890ff" }}>
@@ -44,4 +42,3 @@ export const StatisticsCard: React.FC<StatisticsCardProps> = ({
     </Card>
   );
 };
-

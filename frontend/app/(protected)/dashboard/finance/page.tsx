@@ -90,133 +90,9 @@ export default function FinanceDashboard() {
     return { status: "missing", color: "red", label: "Missing" };
   };
 
-  // Expandable row content showing request details
-  const expandedRowRender = (record: PurchaseRequest) => (
-    <div className="p-4 bg-gray-50 rounded-lg">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <h4 className="font-semibold text-gray-700 mb-2">Request Details</h4>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Title:</span> {record.title}
-          </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Description:</span>{" "}
-            {record.description}
-          </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Amount:</span>{" "}
-            <span className="text-blue-600 font-semibold">
-              {formatCurrency(record.amount)}
-            </span>
-          </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Status:</span>{" "}
-            <StatusBadge status={record.status} />
-          </p>
-        </div>
-        <div>
-          <h4 className="font-semibold text-gray-700 mb-2">Submission Info</h4>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Submitted By:</span>{" "}
-            {record.created_by_name || record.created_by_email}
-          </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Submitted On:</span>{" "}
-            {formatDate(record.created_at)}
-          </p>
-          <p className="text-sm text-gray-600 mb-1">
-            <span className="font-medium">Last Updated:</span>{" "}
-            {formatDate(record.updated_at)}
-          </p>
-        </div>
-      </div>
-
-      {/* Line Items */}
-      {record.items && record.items.length > 0 && (
-        <div className="mb-4">
-          <h4 className="font-semibold text-gray-700 mb-2">Line Items</h4>
-          <Table
-            dataSource={record.items.map((item, idx) => ({
-              ...item,
-              key: idx,
-            }))}
-            columns={[
-              {
-                title: "Description",
-                dataIndex: "description",
-                key: "description",
-              },
-              { title: "Quantity", dataIndex: "quantity", key: "quantity" },
-              {
-                title: "Unit Price",
-                dataIndex: "unit_price",
-                key: "unit_price",
-                render: (price: number) => formatCurrency(price),
-              },
-              {
-                title: "Total",
-                dataIndex: "total",
-                key: "total",
-                render: (total: number) => (
-                  <span className="font-semibold">{formatCurrency(total)}</span>
-                ),
-              },
-            ]}
-            pagination={false}
-            size="small"
-          />
-        </div>
-      )}
-
-      {/* Documents */}
-      <div className="flex flex-wrap gap-2">
-        {record.proforma_file_url && (
-          <Button
-            icon={<FilePdfOutlined />}
-            size="small"
-            onClick={() => window.open(record.proforma_file_url!, "_blank")}
-          >
-            View Proforma
-          </Button>
-        )}
-        {record.purchase_order_file_url && (
-          <Button
-            icon={<FileTextOutlined />}
-            size="small"
-            onClick={() =>
-              window.open(record.purchase_order_file_url!, "_blank")
-            }
-          >
-            View Purchase Order
-          </Button>
-        )}
-        {record.receipt_file_url && (
-          <Button
-            icon={<FileTextOutlined />}
-            size="small"
-            onClick={() => window.open(record.receipt_file_url!, "_blank")}
-          >
-            View Receipt
-          </Button>
-        )}
-        {!record.receipt_file_url &&
-          record.status === EPurchaseRequestStatus.APPROVED && (
-            <Button
-              type="primary"
-              icon={<UploadOutlined />}
-              size="small"
-              onClick={() => router.push(`/requests/${record.id}`)}
-            >
-              Upload Receipt
-            </Button>
-          )}
-      </div>
-    </div>
-  );
-
   const columns: ColumnsType<PurchaseRequest> = [
     {
-      title: "REQUEST ID",
+      title: "Request ID",
       dataIndex: "id",
       key: "id",
       render: (id: string) => (
@@ -226,13 +102,13 @@ export default function FinanceDashboard() {
       ),
     },
     {
-      title: "TITLE",
+      title: "Title",
       dataIndex: "title",
       key: "title",
       render: (text: string) => <span className="font-medium">{text}</span>,
     },
     {
-      title: "AMOUNT",
+      title: "Amount",
       dataIndex: "amount",
       key: "amount",
       render: (amount: number | string) => (
@@ -242,7 +118,7 @@ export default function FinanceDashboard() {
       ),
     },
     {
-      title: "CREATED BY",
+      title: "Created By",
       dataIndex: "created_by_name",
       key: "created_by_name",
       render: (name: string, record: PurchaseRequest) => (
@@ -253,13 +129,13 @@ export default function FinanceDashboard() {
       ),
     },
     {
-      title: "DATE",
+      title: "Date",
       dataIndex: "updated_at",
       key: "updated_at",
       render: (date: string) => formatDate(date),
     },
     {
-      title: "DOCUMENTS",
+      title: "Documents",
       key: "documents",
       render: (_: unknown, record: PurchaseRequest) => (
         <Space size="small">
@@ -298,7 +174,7 @@ export default function FinanceDashboard() {
       ),
     },
     {
-      title: "RECEIPT",
+      title: "Receipt",
       key: "receipt_status",
       render: (_: unknown, record: PurchaseRequest) => {
         const receiptStatus = getReceiptStatus(record);
@@ -325,29 +201,25 @@ export default function FinanceDashboard() {
       },
     },
     {
-      title: "ACTIONS",
+      title: "Actions",
       key: "actions",
       render: (_: unknown, record: PurchaseRequest) => (
         <Space>
           <Button
             type="default"
-            size="small"
             icon={<EyeOutlined />}
-            onClick={(e) => {
-              e.stopPropagation();
-              openDetailsModal(record);
-            }}
+            style={{ height: 32 }}
+            onClick={() => openDetailsModal(record)}
           >
             Details
           </Button>
           {record.purchase_order_file_url && (
             <Button
-              size="small"
               icon={<DownloadOutlined />}
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(record.purchase_order_file_url!, "_blank");
-              }}
+              style={{ height: 32 }}
+              onClick={() =>
+                window.open(record.purchase_order_file_url!, "_blank")
+              }
             >
               PO
             </Button>
@@ -589,7 +461,14 @@ export default function FinanceDashboard() {
       </div>
 
       {/* Approved Requests Section */}
-      <Card title="Approved Requests">
+      <Card
+        title="Approved Requests"
+        styles={{
+          header: { borderBottom: "1px solid #f0f0f0" },
+          body: { padding: "16px" },
+        }}
+        style={{ boxShadow: "none", border: "1px solid #f0f0f0" }}
+      >
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-4">
           <Search
@@ -623,10 +502,6 @@ export default function FinanceDashboard() {
           dataSource={data?.results || []}
           loading={isLoading || statsLoading}
           rowKey="id"
-          expandable={{
-            expandedRowRender,
-            rowExpandable: () => true,
-          }}
           pagination={{
             current: data?.current_page || page,
             total: data?.count || 0,

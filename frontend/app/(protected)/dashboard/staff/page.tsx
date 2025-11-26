@@ -2,12 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button, Card, Table, Space, Input, Select, message } from "antd";
-import {
-  PlusOutlined,
-  SearchOutlined,
-  ReloadOutlined,
-} from "@ant-design/icons";
+import { Button, Card, Table, Input, Select } from "antd";
+import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { usePurchaseRequests, useStatistics } from "@/lib/queries";
 import { useMe } from "@/lib/queries";
 import type { PurchaseRequest } from "@/lib/types";
@@ -70,7 +66,7 @@ export default function StaffDashboard() {
 
   const columns: ColumnsType<PurchaseRequest> = [
     {
-      title: "REQUEST ID",
+      title: "Request ID",
       dataIndex: "id",
       key: "id",
       render: (id: string) => (
@@ -80,13 +76,13 @@ export default function StaffDashboard() {
       ),
     },
     {
-      title: "DATE",
+      title: "Date",
       dataIndex: "created_at",
       key: "created_at",
       render: (date: string) => formatDate(date),
     },
     {
-      title: "ITEM",
+      title: "Item",
       dataIndex: "title",
       key: "title",
       render: (text: string, record: PurchaseRequest) => (
@@ -99,7 +95,7 @@ export default function StaffDashboard() {
       ),
     },
     {
-      title: "AMOUNT",
+      title: "Amount",
       dataIndex: "amount",
       key: "amount",
       render: (amount: number | string) => (
@@ -107,7 +103,7 @@ export default function StaffDashboard() {
       ),
     },
     {
-      title: "STATUS",
+      title: "Status",
       dataIndex: "status",
       key: "status",
       render: (status: EPurchaseRequestStatus) => (
@@ -154,7 +150,11 @@ export default function StaffDashboard() {
       </div>
 
       {/* Actions and Filters */}
-      <Card className="mb-6">
+      <Card
+        className="mb-6"
+        styles={{ body: { padding: "16px" } }}
+        style={{ boxShadow: "none", border: "1px solid #f0f0f0" }}
+      >
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
           <div className="flex flex-col md:flex-row gap-4 flex-1">
             <Search
@@ -199,7 +199,14 @@ export default function StaffDashboard() {
       </Card>
 
       {/* Recent Purchase Requests Table */}
-      <Card title="Recent Purchase Requests">
+      <Card
+        title="Recent Purchase Requests"
+        styles={{
+          header: { borderBottom: "1px solid #f0f0f0" },
+          body: { padding: "16px" },
+        }}
+        style={{ boxShadow: "none", border: "1px solid #f0f0f0" }}
+      >
         <Table
           columns={columns}
           dataSource={data?.results || []}
