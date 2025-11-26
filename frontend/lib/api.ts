@@ -7,6 +7,7 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
   withCredentials: true, // Send cookies with requests
+  timeout: 30000, // 30 second timeout
 });
 
 // Request interceptor to add auth token
@@ -74,6 +75,13 @@ api.interceptors.response.use(
         // Don't redirect here - let the component handle it
         return Promise.reject(refreshError);
       }
+    }
+
+    // Extract error message from response for better error handling
+    if (error.response?.data) {
+      const data = error.response.data;
+      const errorMessage = data.detail || data.message || JSON.stringify(data);
+      error.message = errorMessage;
     }
 
     return Promise.reject(error);

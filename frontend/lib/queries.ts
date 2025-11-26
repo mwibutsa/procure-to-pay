@@ -18,20 +18,18 @@ export const useLogin = () => {
     mutationFn: async (data: { email: string; password: string }) => {
       // Use a separate axios instance for login to avoid interceptor issues
       const loginApi = api;
-      const response = await loginApi.post<{ access: string; user: User } | { detail: string }>(
-        "/auth/login/",
-        data,
-        {
-          // Don't retry on login failures
-          validateStatus: (status) => status < 500,
-        }
-      );
-      
+      const response = await loginApi.post<
+        { access: string; user: User } | { detail: string }
+      >("/auth/login/", data, {
+        // Don't retry on login failures
+        validateStatus: (status) => status < 500,
+      });
+
       if (response.status >= 400) {
         const errorData = response.data as { detail?: string };
         throw new Error(errorData?.detail || "Login failed");
       }
-      
+
       const successData = response.data as { access: string; user: User };
       Cookies.set("access_token", successData.access);
       // Invalidate and refetch user data
@@ -151,18 +149,22 @@ export const useUpdatePurchaseRequest = () => {
 export const useApproveRequest = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({ id, comments }: { id: string; comments?: string }) => {
+  return useMutation<unknown, Error, { id: string; comments?: string }>({
+    mutationFn: async ({ id, comments }) => {
       const response = await api.patch(`/requests/${id}/approve/`, {
-        comments,
+        comments: comments || "",
       });
       return response.data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["purchase-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["statistics"] });
       queryClient.invalidateQueries({
         queryKey: ["purchase-request", variables.id],
       });
+    },
+    onError: (error) => {
+      console.error("Approve request failed:", error);
     },
   });
 };
@@ -170,16 +172,20 @@ export const useApproveRequest = () => {
 export const useRejectRequest = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async ({ id, comments }: { id: string; comments: string }) => {
+  return useMutation<unknown, Error, { id: string; comments: string }>({
+    mutationFn: async ({ id, comments }) => {
       const response = await api.patch(`/requests/${id}/reject/`, { comments });
       return response.data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["purchase-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["statistics"] });
       queryClient.invalidateQueries({
         queryKey: ["purchase-request", variables.id],
       });
+    },
+    onError: (error) => {
+      console.error("Reject request failed:", error);
     },
   });
 };
