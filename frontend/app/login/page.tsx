@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Form, Input, Button, Checkbox, message } from "antd";
 import { useLogin } from "@/lib/queries";
 import type { ApiError } from "@/lib/types";
@@ -8,7 +7,6 @@ import type { AxiosError } from "axios";
 import { EUserRole } from "@/enums";
 
 export default function LoginPage() {
-  const router = useRouter();
   const login = useLogin();
 
   const onFinish = async (values: {
@@ -24,16 +22,22 @@ export default function LoginPage() {
       message.success("Login successful!");
 
       // Redirect based on role
-      if (user.role === EUserRole.STAFF) {
-        router.push("/dashboard/staff");
-      } else if (user.role === EUserRole.APPROVER) {
-        router.push("/dashboard/approver");
+      let redirectUrl = "/dashboard/staff";
+      if (user.role === EUserRole.APPROVER) {
+        redirectUrl = "/dashboard/approver";
       } else if (user.role === EUserRole.FINANCE) {
-        router.push("/dashboard/finance");
+        redirectUrl = "/dashboard/finance";
       }
+
+      // Use window.location to trigger a full page reload so middleware runs
+      window.location.href = redirectUrl;
     } catch (error) {
-      const axiosError = error as AxiosError<ApiError>;
-      message.error(axiosError.response?.data?.detail || "Login failed");
+      if (error instanceof Error) {
+        message.error(error.message || "Login failed");
+      } else {
+        const axiosError = error as AxiosError<ApiError>;
+        message.error(axiosError.response?.data?.detail || "Login failed");
+      }
     }
   };
 

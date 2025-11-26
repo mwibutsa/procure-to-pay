@@ -6,8 +6,7 @@ from rest_framework.mixins import CreateModelMixin
 from django_filters.rest_framework import DjangoFilterBackend
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Q, Count, Sum
-from django.db.models.functions import TruncMonth
+from django.db.models import Q, Sum
 from .models import PurchaseRequest, Approval
 from .serializers import (
     PurchaseRequestSerializer,

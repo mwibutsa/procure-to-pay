@@ -98,3 +98,31 @@ export interface ApiError {
   message?: string;
   errors?: Record<string, string[]>;
 }
+
+// Statistics types
+export interface StaffStatistics {
+  total_requests: number;
+  pending_approval: number;
+  approved: number;
+  rejected: number;
+  total_amount: number;
+}
+
+export interface ApproverStatistics {
+  pending_my_action: number;
+  approved_this_month: number;
+  rejected_this_month: number;
+  total_reviewed: number;
+}
+
+export interface FinanceStatistics {
+  total_approved_requests: number;
+  total_amount_approved: number;
+  pending_payments: number;
+  receipts_pending: number;
+}
+
+export type Statistics =
+  | StaffStatistics
+  | ApproverStatistics
+  | FinanceStatistics;

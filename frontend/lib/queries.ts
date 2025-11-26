@@ -7,6 +7,7 @@ import type {
   PaginatedResponse,
   CreatePurchaseRequestData,
   UpdatePurchaseRequestData,
+  Statistics,
 } from "./types";
 
 // Auth queries
@@ -15,12 +16,27 @@ export const useLogin = () => {
 
   return useMutation<User, Error, { email: string; password: string }>({
     mutationFn: async (data: { email: string; password: string }) => {
-      const response = await api.post<{ access: string; user: User }>(
+      // Use a separate axios instance for login to avoid interceptor issues
+      const loginApi = api;
+      const response = await loginApi.post<{ access: string; user: User } | { detail: string }>(
         "/auth/login/",
-        data
+        data,
+        {
+          // Don't retry on login failures
+          validateStatus: (status) => status < 500,
+        }
       );
-      Cookies.set("access_token", response.data.access);
-      return response.data.user;
+      
+      if (response.status >= 400) {
+        const errorData = response.data as { detail?: string };
+        throw new Error(errorData?.detail || "Login failed");
+      }
+      
+      const successData = response.data as { access: string; user: User };
+      Cookies.set("access_token", successData.access);
+      // Invalidate and refetch user data
+      queryClient.setQueryData(["user"], successData.user);
+      return successData.user;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(["user"], user);
@@ -51,6 +67,10 @@ export const useMe = () => {
       return response.data;
     },
     enabled: !!Cookies.get("access_token"),
+    retry: 1, // Only retry once on failure
+    retryOnMount: false, // Don't retry when component mounts if query failed
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 };
 
@@ -185,6 +205,17 @@ export const useSubmitReceipt = () => {
       queryClient.invalidateQueries({
         queryKey: ["purchase-request", variables.id],
       });
+    },
+  });
+};
+
+// Statistics query
+export const useStatistics = () => {
+  return useQuery<Statistics>({
+    queryKey: ["statistics"],
+    queryFn: async () => {
+      const response = await api.get<Statistics>("/requests/statistics/");
+      return response.data;
     },
   });
 };

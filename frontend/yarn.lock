@@ -3166,6 +3166,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "frontend@workspace:."
   dependencies:
+    "@ant-design/cssinjs": "npm:^2.0.1"
     "@ant-design/icons": "npm:^6.1.0"
     "@tailwindcss/postcss": "npm:^4.1.17"
     "@tanstack/react-query": "npm:^5.90.11"
