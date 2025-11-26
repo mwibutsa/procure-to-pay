@@ -2,17 +2,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Enable corepack for yarn
-RUN corepack enable
+# Enable corepack and install yarn
+RUN corepack enable && corepack prepare yarn@4.12.0 --activate
 
-# Copy package files first for better caching
-COPY package.json yarn.lock .yarnrc.yml* ./
+# Copy all files (including .yarn folder and .yarnrc.yml)
+COPY . .
 
 # Install dependencies
-RUN yarn install --immutable || yarn install
-
-# Copy source code
-COPY . .
+RUN yarn install
 
 # Build arguments for environment variables
 ARG NEXT_PUBLIC_API_URL
@@ -27,8 +24,6 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-
-RUN corepack enable
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
