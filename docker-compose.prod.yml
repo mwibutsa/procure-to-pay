@@ -1,0 +1,18 @@
+# Production docker-compose file
+# Extends docker-compose.yml and adds image tags for registry deployment
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
+#       docker-compose -f docker-compose.yml -f docker-compose.prod.yml push
+
+services:
+  backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-backend:latest}
+  
+  frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-frontend:latest}
+  
+  celery:
+    image: ${BACKEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-backend:latest}
+  
+  celery-beat:
+    image: ${BACKEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-backend:latest}
+

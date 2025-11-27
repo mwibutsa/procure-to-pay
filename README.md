@@ -135,7 +135,22 @@ yarn dev
 
 ## VPS Deployment
 
-### 1. Setup Nginx
+### 1. Build and Push Images to Registry (Optional)
+
+If you want to push images to GitHub Container Registry:
+
+```bash
+# Login to GitHub Container Registry
+echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+
+# Build and tag images for production
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml build
+
+# Push images to registry
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml push
+```
+
+### 2. Setup Nginx
 
 ```bash
 # Copy nginx config
@@ -145,14 +160,24 @@ sudo rm /etc/nginx/sites-enabled/default  # Remove default site
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-### 2. Deploy with Docker
+### 3. Deploy with Docker
+
+**Option A: Build locally on server**
 
 ```bash
 cd /opt/procure-to-pay
 docker-compose up -d --build
 ```
 
-### 3. Create Admin User
+**Option B: Pull from registry (if images were pushed)**
+
+```bash
+cd /opt/procure-to-pay
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml pull
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+### 4. Create Admin User
 
 ```bash
 docker-compose exec backend python manage.py createsuperuser

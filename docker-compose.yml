@@ -28,14 +28,13 @@ services:
     restart: unless-stopped
 
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py collectstatic --noinput &&
-             gunicorn config.wsgi:application --bind 0.0.0.0:8000"
+             gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --threads 2 --timeout 120 --graceful-timeout 30"
     ports:
       - "8000:8000"
     env_file:
@@ -51,10 +50,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/docs/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-frontend:latest}
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -65,11 +69,17 @@ services:
     environment:
       - NODE_ENV=production
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
 
   celery:
-    image: ${BACKEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -89,7 +99,6 @@ services:
     restart: unless-stopped
 
   celery-beat:
-    image: ${BACKEND_IMAGE:-ghcr.io/mwibutsa/procure-to-pay-backend:latest}
     build:
       context: ./backend
       dockerfile: Dockerfile
