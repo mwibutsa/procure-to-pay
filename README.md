@@ -63,6 +63,7 @@ docker-compose up --build
 ```
 
 **Access:**
+
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000/api
 - API Docs: http://localhost:8000/api/docs/
@@ -77,28 +78,28 @@ Or via Django Admin at http://localhost:8000/admin/
 
 ## User Roles
 
-| Role | Permissions |
-|------|-------------|
-| **Staff** | Create requests, upload receipts, view own requests |
-| **Approver Level 1** | Approve/reject requests (first level) |
-| **Approver Level 2** | Approve/reject requests (final level) |
-| **Finance** | View approved requests, manage documents |
+| Role                 | Permissions                                         |
+| -------------------- | --------------------------------------------------- |
+| **Staff**            | Create requests, upload receipts, view own requests |
+| **Approver Level 1** | Approve/reject requests (first level)               |
+| **Approver Level 2** | Approve/reject requests (final level)               |
+| **Finance**          | View approved requests, manage documents            |
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/login/` | Login |
-| POST | `/api/auth/logout/` | Logout |
-| GET | `/api/auth/me/` | Current user |
-| GET | `/api/requests/` | List requests |
-| POST | `/api/requests/` | Create request |
-| GET | `/api/requests/{id}/` | Request details |
-| PUT | `/api/requests/{id}/` | Update request |
-| PATCH | `/api/requests/{id}/approve/` | Approve request |
-| PATCH | `/api/requests/{id}/reject/` | Reject request |
-| POST | `/api/requests/{id}/submit-receipt/` | Submit receipt |
-| GET | `/api/requests/statistics/` | Dashboard stats |
+| Method | Endpoint                             | Description     |
+| ------ | ------------------------------------ | --------------- |
+| POST   | `/api/auth/login/`                   | Login           |
+| POST   | `/api/auth/logout/`                  | Logout          |
+| GET    | `/api/auth/me/`                      | Current user    |
+| GET    | `/api/requests/`                     | List requests   |
+| POST   | `/api/requests/`                     | Create request  |
+| GET    | `/api/requests/{id}/`                | Request details |
+| PUT    | `/api/requests/{id}/`                | Update request  |
+| PATCH  | `/api/requests/{id}/approve/`        | Approve request |
+| PATCH  | `/api/requests/{id}/reject/`         | Reject request  |
+| POST   | `/api/requests/{id}/submit-receipt/` | Submit receipt  |
+| GET    | `/api/requests/statistics/`          | Dashboard stats |
 
 Full API documentation available at `/api/docs/` (Swagger UI).
 
