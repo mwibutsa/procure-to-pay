@@ -132,9 +132,22 @@ jobs:
               exit 1
             fi
             
-            # Start services
-            echo "Starting services..."
-            if docker compose up -d --no-deps backend frontend; then
+            # Ensure dependencies (db, redis) are running first
+            echo "Starting dependencies (db, redis)..."
+            if docker compose up -d db redis; then
+              echo "✓ Dependencies started"
+            else
+              echo "ERROR: Failed to start dependencies"
+              exit 1
+            fi
+            
+            # Wait for dependencies to be healthy
+            echo "Waiting for dependencies to be healthy..."
+            sleep 10
+            
+            # Start application services
+            echo "Starting application services..."
+            if docker compose up -d backend frontend; then
               echo "✓ Services started successfully"
             else
               echo "ERROR: Failed to start services"
